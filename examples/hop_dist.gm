@@ -1,0 +1,95 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Hop Distance
+ * category: path finding
+ * complexity:
+ *   time: O(N + E) with N = number of nodes, E = number of edges
+ *   space: O(3 * N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: source_node
+ *         type: node
+ *         description: the source node from the graph for the path.
+ *     out:
+ *       - name: hop_distance
+ *         type: nodeProp<double>
+ *         description: >
+ *           node property holding the hop distance to the source node for each node
+ *           in the graph.
+ *       - name: parent
+ *         type: nodeProp<node>
+ *         description: >
+ *           node property holding the parent node of the each node in the shortest
+ *           path.
+ *       - name: parent_edge
+ *         type: nodeProp<edge>
+ *         description: >
+ *           node property holding the edge ID linking the current node in the path
+ *           with the previous node in the path.
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   Hop distance can give a relatively fast insight on the distances in a graph
+ * definition: >
+ *   The Hop distance of two nodes S and V in a graph is the number of edges that are in a
+ *   shortest path connecting them. This algorithm will return the distance of each node
+ *   with respect to the given source node in the input and will also return the parent
+ *   node and linking edge for each node. The returned information allows to trace back
+ *   shortest paths from any reachable node to the source node.
+ * implementation_details: >
+ *   The implementation of this algorithm uses the built-in BFS feature.
+ * applications:
+ *   - This algorithm computes a basic structural graph property that is useful when looking
+ *     for distances in a graph.
+ * compare_to:
+ *   - id: pgx_builtin_s11_diameter
+ *     difference: >
+ *       While Diamter/Radius computes all possible shortest paths based on hop distance,
+ *       Hop distance algorithm will compute the distance from just the given source node, 
+ *       given source node, which makes it faster but it might not explore the whole graph
+ *       when dealing with directed graphs.
+ *   - id: pgx_builtin_p4r_single_source_all_destinations_hop_distance_reverse
+ *     difference: >
+ *       Using a transpose graph can lead to different results when working with directed
+ *       graphs, thus the hop distances and the paths found can be different from the ones
+ *       when using the original graph.
+ * variants:
+ *   - pgx_builtin_p4r_single_source_all_destinations_hop_distance_reverse
+ * see_also:
+ *   - pgx_builtin_p1a_single_source_single_destination_dijkstra
+ *   - pgx_builtin_p3_single_source_all_destinations_bellman_ford
+ *   - pgx_builtin_p5_fattest_path
+ *   - pgx_builtin_s11_diameter
+ * links:
+ *   - name: Distance "("graph theory")"
+ *     url: https://en.wikipedia.org/wiki/Distance_(graph_theory)
+ *   - name: Breadth-first search
+ *     url: https://en.wikipedia.org/wiki/Breadth-first_search
+ */
+
+procedure hop_dist(G: graph, root: node; dist: N_P<double>, prev: N_P<node>,
+    prev_edge: N_P<edge>) {
+
+  if (G.numNodes() == 0) return;
+
+  G.dist = +INF;
+  G.prev = NIL;
+  G.prev_edge = NIL;
+  root.dist = 0;
+  root.prev = NIL;
+  root.prev_edge = NIL;
+
+  inBFS(n: G.nodes from root) {
+    n.dist = currentBFSLevel();
+    n.prev = n.BFSParentNode();
+    n.prev_edge = n.BFSParentEdge();
+  }
+
+}

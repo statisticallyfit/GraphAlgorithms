@@ -1,0 +1,54 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Triangle Counting
+ * category: structure evaluation
+ * complexity:
+ *   time: O(E ^ 1.5) with E = number of edges
+ *   space: O(N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *   return:
+ *     type: long
+ *     description: returns the total number of triangles found.
+ * tweetable_description: >
+ *   triangle counting gives an overview of the amount of connections between nodes
+ *   in neighborhoods
+ * definition: >
+ *   This algorithm is intended for undirected graphs and will count all the existing
+ *   triangles on it. If the graph is a directed one, the algorithm will not count correctly
+ *   the triangles in it.
+ * implementation_details: >
+ *   This algorithm is designed to run in parallel given its high degree of parallelization.
+ * applications:
+ *   - Triangles in graphs can be used as a measure of the quality in social networks,
+ *     they can help to find communities within graphs.
+ * compare_to:
+ *   - id: pgx_builtin_s13_local_clustering_coefficient
+ *     difference: >
+ *       The structure of both algorithms is very similar, the difference lies in the extra
+ *       information used in LCC in order to compute the coefficients for each node. 
+ * see_also:
+ *   - pgx_builtin_c2_community_detection_conductance_minimization
+ *   - pgx_builtin_s13_local_clustering_coefficient
+ */
+
+procedure triangle_counting(G: graph): long {
+  long T = 0;
+
+  foreach(u: G.nodes) {
+    foreach(v: u.nbrs) (v > u) {
+      foreach(w: u.nbrs) (w > v) {
+        if ((v.hasEdgeTo(w))) {
+          T++;
+        }
+      }
+    }
+  }
+  return T;
+}

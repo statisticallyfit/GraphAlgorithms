@@ -1,0 +1,124 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Approximate PageRank
+ * category: ranking and walking
+ * complexity:
+ *   time: O(E * k) with E = number of edges, k <= maximum number of iterations
+ *   space: O(N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: max_error
+ *         type: double
+ *         description: >
+ *           maximum tolerated error value. The algorithm will stop once the sum
+ *           of the error values of all vertices becomes smaller than this value.
+ *       - name: damping_factor
+ *         type: double
+ *         description: damping factor.
+ *       - name: max_iterations
+ *         type: int
+ *         description: maximum number of iterations that will be performed.
+ *     out:
+ *       - name: pagerank
+ *         type: nodeProp<double>
+ *         description: >
+ *           node property holding the (normalized) PageRank value for each node (a
+ *           value between 0 and 1).
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   Faster, but less accurate than pagerank. It compares and spots out important nodes
+ *   in a graph
+ * definition: >
+ *   This variant of the PageRank algorithm computes the ranking scores for the nodes in
+ *   similar way to the classic algorithm without normalization and with a more relaxed
+ *   convergence criteria, since the tolerated error value is compared against each single
+ *   node in the graph, instead of looking at the cumulative node error. Thus this variant
+ *   will converge faster than the classic algorithm, but the ranking values might not be
+ *   as accurate as in the classic implementation.
+ * implementation_details: >
+ *   The implementation of this algorithm uses an iterative method.
+ *   The ranking values of all the vertices in the graph are computed, hence updated,
+ *   at each iteration step.
+ * applications:
+ *   - PageRank can be used to measure the relative importance of documents which are
+ *     linked together, such as the World Wide Web. The computed rank represents a
+ *     probability distribution of the likelihood that a person randomly clicking on links
+ *     will arrive at any particular page.
+ * compare_to:
+ *   - id: pgx_builtin_k1a_pagerank
+ *     difference: >
+ *       The main differences between the approximate version of PageRank and the classic
+ *       non-normalized algorithm will be the accuracy and possibly the relevance order of
+ *       the ranking scores, which are a trade off for the speed in the approximate version.
+ * see_also:
+ *   - pgx_builtin_k1a_pagerank
+ */
+
+procedure pg_rank_delta(G: graph, tolerance, d: double, max_iter_count: int;
+    pg_rank: nodeProp<double>) {
+
+  nodeProp<bool> active;
+  nodeProp<double> my_delta;
+  nodeProp<double> new_delta;
+
+  double initial_pg_rank_value = 1.0 / G.numNodes();
+
+  // initialize 
+  bool nodes_active = true;
+  int iteration = 0;
+  double N = G.numNodes();
+  G.active = true;
+  G.my_delta = initial_pg_rank_value;
+  G.new_delta = 0.0;
+  G.pg_rank = initial_pg_rank_value;
+
+  // push 
+  while (nodes_active && iteration < max_iter_count) {
+
+    nodes_active = false;
+
+    // push 
+    foreach(n:G.nodes)(n.active) { 
+      foreach(k:n.outNbrs) 
+        k.new_delta += n.my_delta / n.outDegree(); 
+    } 
+
+    // consolidate 
+    foreach(n: G.nodes) {
+
+      double new_page_rank;
+      double normalized_delta;
+
+      if (iteration == 0) { // first iteration needs special handling
+        new_page_rank = initial_pg_rank_value*(1-d) + d*n.new_delta;
+        normalized_delta = new_page_rank - initial_pg_rank_value;
+      } 
+      else { 
+        new_page_rank = n.pg_rank + d*n.new_delta;
+        normalized_delta = d*n.new_delta;
+      }
+
+      n.pg_rank = new_page_rank;
+      n.my_delta = normalized_delta;
+
+      if (normalized_delta < 0) normalized_delta = -normalized_delta;
+
+      if (normalized_delta < tolerance) {
+        n.active = false;
+      } else {
+        n.active = true;
+        nodes_active |= true;
+      }
+      n.new_delta = 0;
+    }
+    iteration++;
+  }
+}

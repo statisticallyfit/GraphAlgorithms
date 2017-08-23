@@ -1,0 +1,52 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Out-Degree Centrality
+ * category: ranking and walking
+ * complexity:
+ *   time: O(N) with N = number of nodes
+ *   space: O(N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *     out:
+ *       - name: centrality
+ *         type: nodeProp<int>
+ *         description: >
+ *           node property holding the degree centrality value for each node in
+ *           the graph.
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   Out-degree centrality measures the centrality of the nodes based on its degree,
+ *   letting you see how a node influences its neighborhood
+ * definition: >
+ *   Out-Degree centrality returns the sum of the number of outgoing edges for each node
+ *   in the graph.
+ * implementation_details: >
+ *   This algorithm is designed to run in parallel given its high degree of parallelism.
+ * applications:
+ *   - Since out-degree centrality accounts for the connections of the nodes, it can be
+ *     used to see the influence a node has over the nodes in its immediate neighborhood.
+ * compare_to:
+ *   - id: pgx_builtin_k7c_degree_centrality
+ *     difference: >
+ *       The difference between these two algorithms is the restrictions on the outgoing
+ *       edges used to compute the centrality score.
+ * see_also:
+ *   - pgx_builtin_k7c_degree_centrality
+ * links:
+ *   - name: Degree Centrality (Wikipedia)
+ *     url: https://en.wikipedia.org/wiki/Centrality#Degree_centrality
+ */
+
+proc outdegree_centrality(G: graph; OC: N_P<int>)
+{
+    foreach(n: G.nodes) 
+        n.OC = n.degree();
+}

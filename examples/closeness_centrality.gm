@@ -1,0 +1,90 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Closeness Centrality
+ * category: ranking and walking
+ * complexity:
+ *   time: O(N * E) with N = number of nodes, E = number of edges
+ *   space: O(N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *     out:
+ *       - name: centrality
+ *         type: nodeProp<double>
+ *         description: >
+ *           node property holding the closeness centrality value for each
+ *           node.
+ *   return:
+ *     type: bool
+ *     description: returns true if the graph is connected, false otherwise.
+ * tweetable_description: >
+ *   Closenness centrality measures the centrality of the nodes based on distances,
+ *   allowing to find well-connected nodes
+ * definition: >
+ *   The Closeness Centrality of a node V is the reciprocal of the sum of all the
+ *   distances from the possible shortests paths starting from V. Thus the higher the
+ *   centrality value of V, the closer it is to all the other nodes in the graph. This
+ *   implementation is meant for undirected graphs.
+ * implementation_details: >
+ *   The implementation of this algorithm uses a parallel BFS method called Multi-Source
+ *   BFS (MS-BSF) for a faster and more efficient search of the shortests paths.
+ * applications:
+ *   - The coefficient from closeness centrality can be used to identify nodes in a
+ *     graph that are close and well connected to other nodes, hence it can be used in
+ *     many applications for social networks when looking for nodes to spread information
+ *     in a fast way.
+ * compare_to:
+ *   - id: pgx_builtin_k3a_node_betweenness_centrality
+ *     difference: >
+ *       The difference between Closeness and Betweenness centrality lies in the way
+ *       distances are used, since closeness gives more importance to nodes that are
+ *       closer to other reacheble nodes, while betweenness centrality assigns higher
+ *       values to nodes that are in the shortests paths of other nodes.
+ * variants:
+ *   - pgx_builtin_k4b_closeness_centrality_double_length
+ * see_also:
+ *   - pgx_builtin_k1a_pagerank
+ *   - pgx_builtin_k3a_node_betweenness_centrality
+ *   - pgx_builtin_k3b_approx_node_betweenness_centrality
+ *   - pgx_builtin_k3c_approx_node_betweenness_centrality_from_seeds
+ *   - pgx_builtin_k6_eigenvector_centrality
+ *   - pgx_builtin_k7a_outdegree_centrality
+ *   - pgx_builtin_k7b_indegree_centrality
+ *   - pgx_builtin_k7c_degree_centrality
+ * links:
+ *   - name: Centrality in Social Networks Conceptual Clarification.
+ *     url: http://leonidzhukov.ru/hse/2013/socialnetworks/papers/freeman79-centrality.pdf
+ */
+
+procedure closeness_centrality(G: graph; CC: nodeProp<double>) : bool
+{
+  bool connected = true;
+
+  foreach (s : G.nodes) {
+    long foundNodes = 0;
+    long levelSum;
+
+    inBFS(v: G.nodes from s) {
+      foundNodes++;
+      levelSum += currentBFSLevel();
+    }
+
+    if ((foundNodes != G.numNodes()) || (levelSum == 0)) {
+      connected &= false;
+    } else {
+      s.CC = 1.0 / (double) levelSum;
+    }
+  }
+
+  if(connected) {
+    return true;
+  } else {
+    G.CC = 0.0; // disconnected graph
+    return false;
+  }
+}

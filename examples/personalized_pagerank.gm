@@ -1,0 +1,100 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Personalized PageRank
+ * category: ranking and walking
+ * complexity:
+ *   time: O(E * k) with E = number of edges, k <= maximum number of iterations
+ *   space: O(N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: node
+ *         type: node
+ *         description: the chosen node from the graph for personalization.
+ *       - name: max_error
+ *         type: double
+ *         description: >
+ *           maximum tolerated error value. The algorithm will stop once the sum
+ *           of the error values of all vertices becomes smaller than this value.
+ *       - name: damping_factor
+ *         type: double
+ *         description: damping factor.
+ *       - name: max_iterations
+ *         type: int
+ *         description: maximum number of iterations that will be performed.
+ *       - name: normalization
+ *         type: boolean
+ *         description: >
+ *           boolean flag to determine whether the algorithm will take into
+ *           account dangling nodes for the ranking scores.
+ *     out:
+ *       - name: pagerank
+ *         type: nodeProp<double>
+ *         description: >
+ *           node property holding the (normalized) PageRank value for each node (a
+ *           value between 0 and 1).
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   Personalized PageRank for a node of interest. It compares and spots out
+ *   important nodes in a graph
+ * definition: >
+ *   The Personalized Pagerank allows to select a particular node or a set of nodes from
+ *   the given graph in order to give them a greater importance when computing the
+ *   ranking score, which will have as result a personalized Pagerank score and reveal
+ *   relevant (or similar) nodes to the ones chosen at the beginning.
+ * implementation_details: >
+ *   The implementation of this algorithm uses an iterative method.
+ *   The PageRank values of all the vertices in the graph are computed, hence updated,
+ *   at each iteration step.
+ * applications:
+ *   - It introduces the concept of personalization for the PageRank applications, which
+ *     allows to get relevant information from the given subset.
+ * variants:
+ *   - pgx_builtin_k2b_personalized_pagerank_from_set
+ *   - pgx_builtin_k2c_personalized_weighted_pagerank
+ *   - pgx_builtin_k2d_personalized_weighted_pagerank_from_set
+ * see_also:
+ *   - pgx_builtin_k1a_pagerank
+ * links:
+ *   - name: The Anatomy of a Large-Scale Hypertextual Web Search Engine
+ *     url: http://infolab.stanford.edu/pub/papers/google.pdf
+ *   - name: The PageRank citation ranking":" Bringing order to the Web.
+ *     url: http://ilpubs.stanford.edu:8090/422/1/1999-66.pdf
+ */
+
+procedure personalized_pagerank(G: graph, v: node, e,d: double, max_iter_count: int, norm: bool;
+    pg_rank: nodeProp<double>) {
+  
+  double N = G.numNodes();
+
+  double diff;
+  int cnt = 0;
+  G.pg_rank = 0;
+  v.pg_rank = 1.0;
+
+  do {
+    diff = 0.0;
+    double dangling_factor = 0;
+
+    if (norm) {
+      dangling_factor = d / N * sum(n: G.nodes) (n.outDegree() == 0) { n.pg_rank };
+    }
+
+    foreach (t: G.nodes) {
+      double val1 = (t==v) ? (1-d) : 0;
+      double val2 = d * sum(w: t.inNbrs) {w.pg_rank / w.outDegree()} ;
+      double val = val1 + val2 + dangling_factor;
+      diff += | val - t.pg_rank |;
+      t.pg_rank <= val;
+    }
+    cnt++;
+  } while ((diff > e) && (cnt < max_iter_count));
+}
+

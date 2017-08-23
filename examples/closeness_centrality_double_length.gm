@@ -1,0 +1,117 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Closeness Centrality (with weights)
+ * category: ranking and walking
+ * complexity:
+ *   time: O(N * E * d) with E = number of edges, N = number of nodes, d = diameter of the graph
+ *   space: O(5 * N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: weight
+ *         type: edgeProp<double>
+ *         description: >
+ *           edge property holding the weight of each edge in the graph.
+ *     out:
+ *       - name: centrality
+ *         type: nodeProp<double>
+ *         description: >
+ *           node property holding the closeness centrality value for each
+ *           node.
+ *   return:
+ *     type: bool
+ *     description: boolean flag that checks if the graph is connected.
+ * tweetable_description: >
+ *   Closenness centrality measures the centrality of the nodes based on weighted
+ *   distances, allowing to find well-connected nodes
+ * definition: >
+ *   This variant of Closeness Centrality takes into account the weights from the edges
+ *   when computing the reciprocal of the sum of all the distances from the possible
+ *   shortests paths starting from the node V, for every node in the graph. The weights
+ *   of the edges must be positive values greater than 0.
+ * implementation_details: >
+ *   The implementation of is more expensive to compute than the normal closeness
+ *   centrality because of the inclusion of the weights in the edges which influence the
+ *   selection of edges for the shortest paths.
+ * applications:
+ *   - The coefficient from closeness centrality can be used to identify nodes in a
+ *     graph that are close and well connected to other nodes, hence it can be used in
+ *     many applications for social networks when looking for nodes to spread information
+ *     in a fast way.
+ * compare_to:
+ *   - id: pgx_builtin_k3a_node_betweenness_centrality
+ *     difference: >
+ *       The difference between closeness and betweenness centrality lies in the way
+ *       distances are used, since closeness gives more importance to nodes that are
+ *       closer to other reacheble nodes, while betweenness centrality assigns higher
+ *       values to nodes that are in the shortests paths of other nodes.
+ * see_also:
+ *   - pgx_builtin_k4a_closeness_centrality_unit_length
+ * links:
+ *   - name: Centrality in Social Networks Conceptual Clarification.
+ *     url: http://leonidzhukov.ru/hse/2013/socialnetworks/papers/freeman79-centrality.pdf
+ */
+
+procedure closeness_centrality_double_length(G: graph, len: edgeProp<double>; 
+    CC: nodeProp<double>) : bool
+{
+    N_P<bool> updated;
+    N_P<bool> updated_nxt;
+    N_P<double> dist;
+    N_P<double> dist_nxt;
+
+    G.dist = INF;
+
+    // for every node in G
+    for (root: G.nodes) {
+
+        // Run Bell-man Ford Algorithm
+        {
+            G.dist    = (_ == root) ? 0 : +INF;
+            G.updated = (_ == root) ? true : false;
+            G.dist_nxt = _.dist;
+            G.updated_nxt = _.updated;
+            bool fin = false;
+
+            while(!fin) {
+                fin = true;
+
+                foreach(n: G.nodes)(n.updated) {
+                    foreach(s: n.nbrs) {
+                        edge(G) e = s.toEdge(); // the edge to s
+                        // updated_nxt becomes true only if dist_nxt is
+                        //actually updated
+                        <s.dist_nxt; s.updated_nxt> min= <n.dist + e.len; true>;
+                    }
+                }
+        
+                G.dist = _.dist_nxt;
+                G.updated = _.updated_nxt;
+                G.updated_nxt = false;
+                fin = ! exist(n: G.nodes){n.updated};
+            }
+
+        }
+
+
+        // Update CC
+        bool b  = exist(v:G.nodes){v.dist == INF};
+        double levelSum = sum(v:G.nodes){v.dist};
+        G.dist = INF;
+
+        if (b) {
+            G.CC = 0.0;     // disconnected graph
+            return false;
+        } else {
+            root.CC = 1.0 / (double) levelSum;
+        }
+    }
+
+    return true;
+}
+

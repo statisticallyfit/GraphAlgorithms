@@ -1,0 +1,216 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Bidirectional Filtered Dijkstra's Algorithm
+ * category: path finding
+ * complexity:
+ *   time: O(N log N) with N = number of nodes
+ *   space: O(10 * N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: weight
+ *         type: edgeProp<double>
+ *         description: >
+ *           edge property holding the (positive) weight of each edge in the
+ *           graph.
+ *       - name: source_node
+ *         type: node
+ *         description: the source node from the graph for the path.
+ *       - name: destination_node
+ *         type: node
+ *         description: the destination node from the graph for the path.
+ *       - name: filter_expression
+ *         type: graphFilter
+ *         description: >
+ *           filter expression with conditions to be satisfied by the shortest path.
+ *           If the expression is targeted to edges, it will be evaluated straight
+ *           away. If the expression targets nodes, then it will be automatically
+ *           translated into an equivalent edge expression by using the sources
+ *           and/or the destinations of the edges from the current evaluated node,
+ *           with exception of the source and destination nodes.
+ *     out:
+ *       - name: parent
+ *         type: nodeProp<node>
+ *         description: >
+ *           node property holding the parent node of the each node in the shortest
+ *           path.
+ *       - name: parent_edge
+ *         type: nodeProp<edge>
+ *         description: >
+ *           node property holding the edge ID linking the current node in the path
+ *           with the previous node in the path.
+ *   return:
+ *     type: bool
+ *     description: >
+ *           true if there is a path connecting source and destination nodes, false
+ *           otherwise
+ * tweetable_description: >
+ *   Bidirectional dijkstra is a fast algorithm for finding a shortest path while also
+ *   filtering edges
+ * definition: >
+ *   This variant of the Dijkstra's algorithm searches for shortest path in two ways, it
+ *   does a forward search from the source node and a backwards one from the destination
+ *   node, while also adding the corresponding restrictions on the edges given by the
+ *   filter expression. If the path between the nodes exists, both searches will meet each
+ *   other at an intermediate point.
+ * implementation_details: >
+ *   This algorithm runs in a sequential way.
+ * applications:
+ *   - This algorithm can be implemented in optimization problems that can be represented
+ *     with a graph structure.
+ * compare_to:
+ *   - id: pgx_builtin_p2_single_source_single_destination_bidirectional_dijkstra
+ *     difference: >
+ *       The difference between these biderectional implementations is the inclusion of the
+ *       filter expression over the edges, since the shortest path found in both cases can
+ *       be different with the same chosen source and destination nodes, because of the
+ *       restrictions over the edges.
+ * variants:
+ *   - pgx_builtin_p2_single_source_single_destination_bidirectional_dijkstra
+ * see_also:
+ *   - pgx_builtin_p1a_single_source_single_destination_dijkstra
+ * links:
+ *   - name: Dijkstra's algorithm
+ *     url: https://en.wikipedia.org/wiki/Dijkstra's_algorithm
+ *   - name: Bidirectional search
+ *     url: https://en.wikipedia.org/wiki/Bidirectional_search
+ */
+
+require "oracle.pgx.filter.evaluation.pathfinding
+    .SimplePathFindingEvaluationContext";
+require "oracle.pgx.filter.evaluation.pathfinding.PathFindingFilter";
+
+procedure bidirectional_dijkstra_filter(G: graph, Weight: E_P<double>, src, dst: node,
+    F: $PathFindingFilter; Parent: N_P<node>, ParentEdge: N_P<edge>) : bool {
+
+  if (G.numNodes() == 0) return false;
+  if (src == dst) return true;
+  
+  [F.prepare(src, dst)];
+  
+  // Temporary data structures
+  N_P<node> RParent;
+  N_P<edge> RParentEdge;
+  N_P<bool> FFinalized;
+  N_P<bool> RFinalized;
+  map<node, double> FReachable;
+  map<node, double> RReachable;
+  N_P<double> FCost;
+  N_P<double> RCost;
+
+  // Initializations
+  G.Parent = NIL;
+  G.ParentEdge = NIL;
+  G.RParent = NIL;
+  G.FFinalized = false;
+  G.RFinalized = false;
+  G.FCost = +INF;
+  G.RCost = +INF;
+  FReachable[src] = 0.0;
+  RReachable[dst] = 0.0;
+  src.FCost = 0.0;
+  dst.RCost = 0.0;
+
+  /*
+   *  Same as Bidirectional Dijkstra algorithm but using a filter
+   */
+  double curMinFCost = 0.0;
+  double curMinRCost = 0.0;
+  double minCost = +INF;
+  double minUnitCost = 0.0;
+  node mid = NIL;
+  bool terminate = false;
+
+  [SimplePathFindingEvaluationContext context = new
+    SimplePathFindingEvaluationContext($G)];
+
+  while ( !terminate &&
+      (FReachable.size() != 0) &&
+      (RReachable.size() != 0) ) {
+
+    if (FReachable.size() <= RReachable.size()) {
+      node(G) fnext = FReachable.getMinKey();
+      FReachable.remove(fnext);
+      fnext.FFinalized = true;
+      curMinFCost = fnext.FCost;
+      if (curMinFCost + curMinRCost + minUnitCost >= minCost) {
+        terminate = true;
+      }
+
+      double fdist = fnext.FCost;
+      for(v: fnext.nbrs) (!v.FFinalized) {
+        edge e = v.toEdge();
+
+        [context.setContext($fnext, $v, $e)];
+
+        if ( [F.evaluate(context)] ) {
+          if (fdist + e.Weight + curMinRCost <= minCost) {
+            if (v.FCost > fdist + e.Weight) {
+              v.FCost = fdist + e.Weight;
+              FReachable[v] = v.FCost;
+              v.Parent = fnext;
+              v.ParentEdge = e;
+              if (v.RCost != +INF) {
+                double newCost = v.FCost + v.RCost;
+                <minCost; mid> min= <newCost; v>;
+              }
+            }
+          }
+        }
+      }
+    } else {
+      node(G) rnext = RReachable.getMinKey();
+      RReachable.remove(rnext);
+      rnext.RFinalized = true;
+      curMinRCost = rnext.RCost;
+      if (curMinFCost + curMinRCost + minUnitCost >= minCost) {
+        terminate = true;
+      }
+        
+      double rdist = rnext.RCost;
+      for(v: rnext.inNbrs) (!v.RFinalized) {
+        edge e = v.toEdge();
+
+        [context.setContext($v, $rnext, $e)];
+
+        if ( [F.evaluate(context)] ) {
+          if (rdist + e.Weight + curMinFCost <= minCost) {
+            if (v.RCost > rdist + e.Weight) {
+              v.RCost = rdist + e.Weight;
+              RReachable[v] = v.RCost;
+              v.RParent = rnext;
+              v.RParentEdge = e;
+              if (v.FCost != +INF) {
+                double newCost = v.FCost + v.RCost;
+                <minCost; mid> min= <newCost; v>;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // if a path was found
+  if (mid != NIL) {
+    // Update the 'Parent' and 'ParentEdge' property of all the nodes in the
+    //path from mid to dst
+    node cur = mid;
+    while (cur != dst) {
+      node prev = cur.RParent;
+      prev.Parent = cur;
+      prev.ParentEdge = cur.RParentEdge;
+      cur = prev;
+    }
+
+    return true;
+  }
+  
+  // No path was found
+  return false;
+}

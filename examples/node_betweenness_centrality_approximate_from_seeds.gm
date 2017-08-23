@@ -1,0 +1,90 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Approximate Node Betweenness Centrality From Seeds
+ * category: ranking and walking
+ * complexity:
+ *   time: O(N * E) with N = number of nodes, E = number of edges
+ *   space: O(3 * N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: node set
+ *         type: nodeSet
+ *         description: >
+ *           the set of chosen nodes to be used to compute the approximated
+ *           betweenness centrality coeficients.
+ *     out:
+ *       - name: centrality
+ *         type: nodeProp<double>
+ *         description: >
+ *           node property holding the betweenness centrality value for each
+ *           node.
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   Faster, but less accurate than betweenness centrality, it identifies important
+ *   nodes for the flow of information
+ * definition: >
+ *   This variant of betweenness centrality approximates the centrality of the nodes by
+ *   just using the nodes from the given set as starting points for the BFS traversals of
+ *   the graph, instead of computing the exact value by using all the nodes in the graph.
+ * implementation_details: >
+ *   The implementation of this algorithm uses a built-in BFS method for the graph
+ *   traversals.
+ * applications:
+ *   - The coefficient from betweenness centrality can be used to identify nodes in a
+ *     graph that are vital for the flow of information within it, making it a good option
+ *     for applications in social networks and problems modelling flows of any kind.
+ * compare_to:
+ *   - id: pgx_builtin_k3a_node_betweenness_centrality
+ *     difference: >
+ *       The closer the size of the given set of nodes gets to the total number of nodes in
+ *       the graph N, the better the approximation becomes, but it will also increase the
+ *       computation time.
+ *   - id: pgx_builtin_k3b_approx_node_betweenness_centrality
+ *     difference: >
+ *       The difference between these two implementations is that this variant has the option
+ *       to choose specific nodes instead of using random ones.
+ * variants:
+ *   - pgx_builtin_k3b_approx_node_betweenness_centrality
+ * see_also:
+ *   - pgx_builtin_k3a_node_betweenness_centrality
+ * links:
+ *   - name: A Faster Algorithm for Betweenness Centrality.
+ *     url: http://algo.uni-konstanz.de/publications/b-fabc-01.pdf
+ *   - name: On Variants of Shortest-Path Betweenness Centrality and their Generic Computation
+ *     url: http://algo.uni-konstanz.de/publications/b-vspbc-08.pdf
+ */
+
+procedure comp_BC(G: graph, Seeds: nodeSequence; BC: N_P<double>)  {
+  G.BC = 0; // Initialize
+
+  for (s: Seeds.items) { 
+
+    // temporary values per node
+    nodeProperty<double> sigma;
+    nodeProperty<double> delta;
+    G.sigma = 0;
+    s.sigma = 1;
+
+    // BFS order iteration from s
+    inBFS(v: G.nodes from s)(s != v){
+       // Summing over BFS parents
+       v.sigma = sum(w:v.upNbrs) { w.sigma };
+    }
+    inReverse (v!=s) { // Reverse-BFS order iteration to s
+      v.delta =  // Summing over BFS children
+         sum (w:v.downNbrs) {
+            v.sigma / w.sigma * (1+ w.delta) };
+
+      v.BC += v.delta; // accumulate BC
+    }
+  }
+}
+

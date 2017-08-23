@@ -1,0 +1,118 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+ /**
+ * name: Eigenvector Centrality
+ * category: ranking and walking
+ * complexity:
+ *   time: O(N * k) with N = number of nodes, k <= maximum number of iterations
+ *   space: O(2 * N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: max_iterations
+ *         type: int
+ *         description: maximum number of iterations that will be performed.
+ *       - name: max_error
+ *         type: double
+ *         description: >
+ *           maximum tolerated error value. The algorithm will stop once the sum
+ *           of the error values of all vertices becomes smaller than this value.
+ *       - name: l2_normalization
+ *         type: boolean
+ *         description: >
+ *           boolean flag to determine whether the algorithm will use the l2 norm
+ *           (Euclidean norm) or the l1 norm (absolute value) to normalize the
+ *           centrality scores.
+ *       - name: use_in_edges
+ *         type: boolean
+ *         description: >
+ *           boolean flag to determine whether the algorithm will use the incoming
+ *           or the outgoing edges in the graph for the computations.
+ *     out:
+ *       - name: centrality
+ *         type: nodeProp<double>
+ *         description: >
+ *           node property holding the normalized centrality value for each node.
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   Eigenvector centrality measures the centrality of the nodes in an intrincated way
+ *   using neighbors, allowing to find well-connected nodes
+ * definition: >
+ *   The Eigenvector Centrality determines the centrality of a node by adding and weighting
+ *   the centrality of its neighbors. Using outgoing or incoming edges when computing the
+ *   eigenvector centrality will be equivalent to do so with the normal or the transpose
+ *   adjacency matrix, respectively leading to the "right" and "left" eigenvectors.
+ * implementation_details: >
+ *   The implementation of this algorithm uses the power iteration method.
+ * applications:
+ *   - The eigenvector centrality assigns higher scores to nodes that are connected to other
+ *     well-connected nodes in the graphs, making this algorithm a good option to find
+ *     important or relevant people in social networks.
+ * compare_to:
+ *   - id: pgx_builtin_k1a_pagerank
+ *     difference: >
+ *       Eigenvector centralitiy is similar to PageRank, although it converges much slower,
+ *       thus not very suitable for large graphs and there are some differences in the
+ *       normalization of the scores.
+ * see_also:
+ *   - pgx_builtin_k1a_pagerank
+ *   - pgx_builtin_k3a_node_betweenness_centrality
+ *   - pgx_builtin_k4a_closeness_centrality_unit_length
+ *   - pgx_builtin_k5_hits
+ * links:
+ *   - name: Power and Centrality":" A Family of Measures.
+ *     url: http://www.leonidzhukov.net/hse/2014/socialnetworks/papers/Bonacich-Centrality.pdf
+ */
+
+procedure eigenvector_centrality( G: graph, max_iter: int, max_diff: double, 
+    Use_L2Norm, Use_InEdges: bool; e_cent: nodeProp<double>) {
+    
+  nodeProp<double> e_cent_unnormal;
+
+  // Initialize
+  G.e_cent = 1.0 / (double) G.numNodes();
+
+  int iter = 0;
+  double diff = 0.0;
+
+  do {
+    // compute unnormalized sum
+    foreach (n: G.nodes) {
+      if (Use_InEdges)
+        n.e_cent_unnormal = sum (v: n.inNbrs) {v.e_cent};
+      else
+        n.e_cent_unnormal = sum (v: n.nbrs) {v.e_cent};
+    }
+
+    double s;
+    if (Use_L2Norm) {
+      //-----------------------------------------
+      // L2 Norm Normalization
+      //-----------------------------------------
+      double l2Sum = sum(n: G.nodes) {n.e_cent_unnormal * n.e_cent_unnormal};
+      s = (l2Sum == 0) ? 1.0 : 1 / sqrt(l2Sum);
+    } else {
+      //-----------------------------------------
+      // L1 Norm Normalization
+      //-----------------------------------------
+      double l1Sum = sum(n: G.nodes) {|n.e_cent_unnormal|};
+      s = (l1Sum == 0) ? 1.0 : 1 / (l1Sum);
+    }
+
+    // update for next step
+    diff = 0;
+    foreach(n: G.nodes) {
+      double val = n.e_cent_unnormal * s;
+      diff += | n.e_cent - val |;
+      n.e_cent = val;
+    }
+    iter ++;
+
+  } while ((iter < max_iter) && (diff > max_diff));
+}

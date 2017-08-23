@@ -1,0 +1,91 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Strongly Connected Components (SCC) via Kosaraju's algorithm
+ * category: connected components
+ * complexity:
+ *   time: O(N + E) with N = number of nodes, E = number of edges
+ *   space: O(3 * N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *     out:
+ *       - name: scc
+ *         type: nodeProp<long>
+ *         description: >
+ *           node property holding the label of the SCC assigned to each node.
+ *   return:
+ *     type: long
+ *     description: the total number of SCC found in the graph.
+ * tweetable_description: >
+ *   Kosaraju finds strongly connected components in a graph
+ * definition: >
+ *   Kosaraju's algorithm works on directed graphs for finding strongly connected
+ *   components (SCC). A SCC is a maximal subset of nodes of the graph with the particular
+ *   characteristic that every node in the SCC can be reachable from any other other node
+ *   in the SCC.
+ * implementation_details: >
+ *   The implementation of this algorithm uses the built-in DFS and BFS features.
+ * applications:
+ *   - It can be used for clustering and, in social networks, to spot out groups of people
+ *     (commmunities), since people in groups tend to have a high density of links between
+ *     them.
+ * compare_to:
+ *   - id: pgx_builtin_g2b_strongly_connected_components_tarjan
+ *     difference: >
+ *       Although both algorithms use DFS traversals to find the SCC in a graph, Kosaraju's
+ *       algorithm uses a second DFS (or BFS) traversal, while Tarjan just does a single DFS
+ *       traversal, but it needs from a auxiliar stack to keep track of the nodes in the SCC.
+ * see_also:
+ *   - pgx_builtin_g2b_strongly_connected_components_tarjan
+ *   - pgx_builtin_g3_weakly_connected_components
+ *   - pgx_builtin_c1_community_detection_label_propagation
+ *   - pgx_builtin_c2_community_detection_conductance_minimization
+ *   - pgx_builtin_s13_local_clustering_coefficient
+ * links:
+ *   - name: Kosaraju's algorithm
+ *     url: https://en.wikipedia.org/wiki/Kosaraju's_algorithm
+ */
+
+proc kosaraju (G: graph; SCC: N_P<long>) : long {
+  
+  // Initialize SCCbership
+  G.SCC = -1;
+
+  N_P<bool> Checked;
+  G.Checked = false;
+
+  // [Phase 1]
+  // Obtain reverse-post-DFS-order of node sequence.
+  // nodeOrder can be also used here but nodeSeq is faster
+  nodeSeq Seq; 
+  for(t:G.nodes) (!t.Checked)
+  {
+    inDFS(n:G.nodes from t)[!n.Checked] 
+    {} // do nothing at pre-visit
+    inPost{ // check at post-visit
+      n.Checked = true;
+      Seq.pushFront(n);
+    }
+  }
+
+  // [Phase 2]
+  // Starting from each node in the sequence
+  //   do BFS on the transposed graph G^.
+  //   and every nodes that are (newly) visited compose one SCC.
+  long compId = 0;
+  for(t:Seq.items)(t.SCC == -1)
+  {
+    inBFS(n:G^.nodes from t)[n.SCC == -1] 
+    {
+      n.SCC = compId;
+    }
+    compId++;
+  }
+
+  return compId;
+}

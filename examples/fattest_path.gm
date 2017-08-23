@@ -1,0 +1,113 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Fattest Path
+ * category: path finding
+ * complexity:
+ *   time: O(N log N) with N = number of nodes
+ *   space: O(4 * N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: capacity
+ *         type: edgeProp<double>
+ *         description: >
+ *           edge property holding the capacity of each edge in the graph.
+ *       - name: source_node
+ *         type: node
+ *         description: the source node from the graph for the path.
+ *     out:
+ *       - name: parent
+ *         type: nodeProp<node>
+ *         description: >
+ *           node property holding the parent node of the each node in the fattest
+ *           path.
+ *       - name: parent_edge
+ *         type: nodeProp<edge>
+ *         description: >
+ *           node property holding the edge ID linking the current node in the path
+ *           with the previous node in the path.
+ *       - name: fatness
+ *         type: nodeProp<double>
+ *         description: >
+ *           node property holding the capacity value of the fattest path up to the
+ *           current node. The fatness value for the source node will be INF, while
+ *           it will be 0 for all the nodes that are not reachable from the source.
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   Fattest path is a fast algorithm for finding a shortest path adding constraints
+ *   for flowing related matters 
+ * definition: >
+ *   The Fattest path algorithm can be regarded as a variant of Dijkstra's algorithm, it
+ *   tries to find the fattest path between the given source and all the reachable nodes
+ *   in the graph. The fatness of a path is equal to the minimum value of the capacity
+ *   from the edges that take part in the path, thus a fattest path is conformed by the
+ *   edges with the largest possible capacity.
+ * implementation_details: >
+ *   This algorithm runs in a sequential way.
+ * applications:
+ *   - This algorithm can be implemented in optimization problems that can be represented
+ *     with a graph structure.
+ * compare_to:
+ *   - id: pgx_builtin_p1a_single_source_single_destination_dijkstra
+ *     difference: >
+ *       Fattest path looks for maximal values of capacities, which are the equivalent to
+ *       the weights (or distances) in Dijkstra and that are meant to be minimized. Another
+ *       difference is that Fattest path will compute all the possible paths for the nodes
+ *       in the graph.
+ * see_also:
+ *   - pgx_builtin_p1a_single_source_single_destination_dijkstra
+ *   - pgx_builtin_p3_single_source_all_destinations_bellman_ford
+ *   - pgx_builtin_p4_single_source_all_destinations_hop_distance
+ * links:
+ *   - name: Lecture 10 (Fattest Path) - Luca Trevisan
+ *     url: http://www.eecs.berkeley.edu/~luca/cs261/lecture10.pdf
+ */
+
+procedure fattest_path(G: graph, capacity: E_P<double>, root: node; parent_node: N_P<node>,
+    parent_edge: N_P<edge>, fat: nodeProperty<double>) {
+
+  if (G.numNodes() == 0) {
+    return;
+  }
+
+  // sequentially initialize, otherwise compiler flags this algorithm as
+  //parallel in nature
+  for (n: G.nodes) {
+    n.parent_node = NIL;
+    n.parent_edge = NIL;
+    n.fat = 0;
+  }
+  
+  root.fat = +INF;
+  
+  // create 'queue'
+  map<node, double> Q;
+  Q[root] = +INF;
+  
+  while(Q.size() > 0) {
+    node u = Q.getMaxKey();
+    Q.remove(u);
+    
+    for(e : u.outEdges) {
+      node v = e.toNode();
+      
+      double minCap = (u.fat < e.capacity) ? u.fat : e.capacity;
+      
+      if(v.fat < minCap) {
+        v.fat = minCap;     
+        
+        Q[v] = v.fat;
+        
+        v.parent_node = u;
+        v.parent_edge = e;
+      }
+    }
+  } 
+}

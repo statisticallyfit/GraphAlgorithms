@@ -1,0 +1,76 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Random Walk with Restart
+ * category: ranking and walking
+ * complexity:
+ *   time: O(L) with L = length of the random walk
+ *   space: O(N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: source_node
+ *         type: node
+ *         description: starting point of the random walk.
+ *       - name: length
+ *         type: int
+ *         description: length (number of steps) of the random walk.
+ *       - name: reset_probability
+ *         type: double
+ *         description: >
+ *           probability value for resetting the random walk.
+ *     out:
+ *       - name: visit_counter
+ *         type: map<node, int>
+ *         description: >
+ *           map holding the number of visits during the random walk
+ *           for each node in the graph.
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   random walk with restart does the what its name says, it can find approximate
+ *   stationary distributions
+ * definition: >
+ *   This algorithm performs a random walk over the graph. The walk will start at the
+ *   given source node and will randomly visit neighboring nodes in the graph, with a
+ *   probability equal to the value of reset_probability of going back to the starting
+ *   point. The random walk will also go back to the starting point every time it
+ *   reaches a node with no outgoing edges. The algorithm will stop once it reaches
+ *   the specified walk lenght.
+ * applications:
+ *   - The inforamtion gathered from a random walk can be used to approximate stationary
+ *     distributions when the number of visits is normalized
+ * implementation_details: >
+ *   The implementation of this algorithm uses an iterative method. Since the algorithm
+ *   visits the nodes in a random order on each iteration it is non-deterministic.
+ * links:
+ *   - name: Random Walks on Graphs":" A Survey
+ *     url: http://www.cs.elte.hu/~lovasz/erdos.pdf
+ */
+
+procedure random_walk_with_restart(G: graph, source: node, length: int,
+    reset_prob: double; visitationCount: map<node, int>)  {
+
+  if(length <= 0) return;
+  
+  node n = source;
+  int current = 0;
+  
+  while(current < length) {
+    double beta = uniform();
+    
+    if(beta < reset_prob || n.degree() == 0) {
+      n = source;
+    } else {
+      n = n.pickRandomNbr();
+    }
+    visitationCount[n]++;
+    current++;
+  }
+
+}

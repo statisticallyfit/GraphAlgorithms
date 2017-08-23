@@ -1,0 +1,6 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+procedure hello_world() {
+	println("Hello World");
+}

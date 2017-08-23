@@ -1,0 +1,128 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: PageRank
+ * category: ranking and walking
+ * complexity:
+ *   time: O(E * k) with E = number of edges, k <= maximum number of iterations
+ *   space: O(N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: max_error
+ *         type: double
+ *         description: >
+ *           maximum tolerated error value. The algorithm will stop once the sum
+ *           of the error values of all vertices becomes smaller than this value.
+ *       - name: damping_factor
+ *         type: double
+ *         description: damping factor.
+ *       - name: max_iterations
+ *         type: int
+ *         description: maximum number of iterations that will be performed.
+ *       - name: normalization
+ *         type: boolean
+ *         description: >
+ *           boolean flag to determine whether the algorithm will take into account
+ *           dangling nodes for the ranking scores.
+ *     out:
+ *       - name: pagerank
+ *         type: nodeProp<double>
+ *         description: >
+ *           node property holding the (normalized) PageRank value for each node (a
+ *           value between 0 and 1).
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   PageRank computes ranking scores based on the edges in a graph. It compares and
+ *   spots out important nodes in a graph
+ * definition: >
+ *   PageRank is an algorithm that computes ranking scores for the nodes using the
+ *   network created by the incoming edges in the graph. Thus it is intended for directed
+ *   graphs, although undirected graphs can be treated as well by converting them into
+ *   directed graphs with reciprocated edges (i.e. keeping the original edge and creating
+ *   a second one going in the opposite direction). The edges on the graph will define
+ *   the relevance of each node in the graph, reflecting this on the scores, meaning that
+ *   greater scores will correspond to nodes with greater relevance.
+ * implementation_details: >
+ *   The implementation of this algorithm uses an iterative method.
+ *   The PageRank values of all the vertices in the graph are computed, hence updated,
+ *   at each iteration step.
+ * applications:
+ *   - PageRank can be used to measure the relative importance of documents which are
+ *     linked together, such as the World Wide Web. The computed rank represents a
+ *     probability distribution of the likelihood that a person randomly clicking on links
+ *     will arrive at any particular page.
+ * compare_to:
+ *   - id: pgx_builtin_k1b_pagerank_approximate
+ *     difference: >
+ *       The main difference between the approximate version of PageRank and the classic
+ *       non-normalized algorithm will be the accuracy of the ranking scores, which is a
+ *       trade off for the speed in the approximate version.
+ *   - id: pgx_builtin_k1c_pagerank_weighted
+ *     difference: >
+ *       Running the weighted version of the algorithm with uniform weights (i.e. every edge
+ *       from a source node has the same weight) will be equivalent to run the original
+ *       PageRank algorithm.
+ *   - id: pgx_builtin_k3a_node_betweenness_centrality
+ *     difference: >
+ *       PageRank was designed to find important documents in a linked set of documents,
+ *       whereas betweenness centrality is designed to find important people in a social
+ *       network.
+ * variants:
+ *   - pgx_builtin_k1b_pagerank_approximate
+ *   - pgx_builtin_k1c_pagerank_weighted
+ *   - pgx_builtin_k2_personalized_pagerank
+ *   - pgx_builtin_k2b_personalized_pagerank_from_set
+ *   - pgx_builtin_k2c_personalized_weighted_pagerank
+ *   - pgx_builtin_k2d_personalized_weighted_pagerank_from_set
+ * see_also:
+ *   - pgx_builtin_k3a_node_betweenness_centrality
+ *   - pgx_builtin_k3b_approx_node_betweenness_centrality
+ *   - pgx_builtin_k3c_approx_node_betweenness_centrality_from_seeds
+ *   - pgx_builtin_k4a_closeness_centrality_unit_length
+ *   - pgx_builtin_k4b_closeness_centrality_double_length
+ *   - pgx_builtin_k6_eigenvector_centrality
+ *   - pgx_builtin_k7a_outdegree_centrality
+ *   - pgx_builtin_k7b_indegree_centrality
+ *   - pgx_builtin_k7c_degree_centrality
+ *   - pgx_builtin_r1b_salsa
+ * links:
+ *   - name: The Anatomy of a Large-Scale Hypertextual Web Search Engine.
+ *     url: http://infolab.stanford.edu/pub/papers/google.pdf
+ *   - name: The PageRank citation ranking":" Bringing order to the Web.
+ *     url: http://ilpubs.stanford.edu:8090/422/1/1999-66.pdf
+ */
+
+procedure pagerank(G: graph, e,d: double, max_iter_count: int, norm: bool;
+    pg_rank: nodeProp<double>) {
+  
+  double diff;
+  int cnt = 0;
+  double N = G.numNodes();
+
+  G.pg_rank = 1 / N;
+  do {
+    diff = 0.0;
+    double dangling_factor = 0;
+
+    if (norm) {
+      dangling_factor = d / N * sum(v: G.nodes) (v.outDegree() == 0) { v.pg_rank };
+    }
+
+    foreach (t: G.nodes) {
+      double in_sum = sum(w: t.inNbrs) {w.pg_rank / w.outDegree()};
+      double val = (1 - d) / N + d * in_sum + dangling_factor;
+      diff += | val - t.pg_rank |;
+      t.pg_rank <= val;
+    }
+    cnt++;
+  } while ((diff > e) && (cnt < max_iter_count));
+
+}
+

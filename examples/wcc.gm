@@ -1,0 +1,97 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Weakly Connected Components (WCC)
+ * category: connected components
+ * complexity:
+ *   time: O(E * d) with d = diameter of the graph
+ *   space: O(2 * N) with  N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *     out:
+ *       - name: wcc
+ *         type: nodeProp<long>
+ *         description: >
+ *           node property holding the label of the WCC assigned to each node.
+ *   return:
+ *     type: long
+ *     description: the total number of WCC found in the graph.
+ * tweetable_description: >
+ *   Identifying weakly connected components can be useful for clustering graph data
+ * definition: >
+ *   This algorithm finds weakly connected components (WCC) in a directed graph. A WCC is a
+ *   maximal subset of nodes of the graph with the particular characteristic that for every
+ *   pair of nodes U and V in the WCC there must be a directed path connecting U to V or
+ *   viceversa. It is a non-deterministic algorithm because of its parallelized
+ *   implementation.
+ * implementation_details: >
+ *   This algorithm is designed to run in parallel given its high degree of parallelization.
+ * applications:
+ *   - It can be used for clustering and analysis in social networks.
+ * see_also:
+ *   - pgx_builtin_g2a_strongly_connected_components_kosaraju
+ *   - pgx_builtin_g2b_strongly_connected_components_tarjan
+ *   - pgx_builtin_c1_community_detection_label_propagation
+ *   - pgx_builtin_c2_community_detection_conductance_minimization
+ *   - pgx_builtin_s13_local_clustering_coefficient
+ * links:
+ *   - name: Connectivity "("graph theory")"
+ *     url: https://en.wikipedia.org/wiki/Connectivity_(graph_theory)
+ */
+
+procedure wcc(G: graph; CompId: nodeProp<long>) : long {
+
+  nodeProp<node> WCC;
+
+  // Initialize
+  foreach(u: G.nodes) u.WCC = u;
+
+  bool changed;
+  do {
+    changed = false;
+
+    // kernel 1 (get 'maximum' value among neighbors)
+    foreach(u: G.nodes) {
+      foreach(v: u.inNbrs)
+        if (u.WCC < v.WCC) {
+          changed |= true;
+          u.WCC = v.WCC;
+        } // allow race
+      foreach(v: u.outNbrs)
+        if (u.WCC < v.WCC) {
+          changed |= true;
+          u.WCC = v.WCC;
+        } //allow race
+    }
+
+    // kernel 2
+    foreach(u: G.nodes)
+      if (u.WCC != u) {
+        node v = u.WCC;
+        if (v.WCC != v) u.WCC = v.WCC;
+      }
+  } while(changed);
+
+
+  /* Create output format */
+
+  long num_comp = 0;
+  for(n: G.nodes) {
+    if (n.WCC == n) {
+      n.CompId = num_comp;
+      num_comp ++;
+    }
+  }
+
+  foreach(n: G.nodes)(n.WCC != n) {
+    node v = n.WCC;
+    n.CompId = v.CompId;
+  }
+
+  return num_comp;
+}

@@ -1,0 +1,107 @@
+/*
+ * Computes the k-core decomposition of the graph. Returns the largest k-kore
+ * value found.
+ */
+/**
+ * name: K-Core
+ * category: structure evaluation
+ * complexity:
+ *   time: O(E * k) with E = number of edges, k <= maximum number of iterations
+ *   space: O(3 * N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: min_core
+ *         type: long
+ *         description: minimum k-core value.
+ *       - name: max_core
+ *         type: long
+ *         description: maximum k-core value.
+ *     out:
+ *       - name: k_core
+ *         type: nodeProp<long>
+ *         description: >
+ *           node property with the largest k-core value for each node.
+ *   return:
+ *     type: long
+ *     description: the largest k-core value found.
+ * tweetable_description: >
+ *   k-core decomposes a graph into layers revealing subgraphs with particular properties
+ * definition: >
+ *   A k-core is a maximal subgraph in which all of its nodes are connected and have the
+ *   property that all of them have a degree of at least k. The k-cores can be regarded
+ *   as layers in a graph, since a (k+1)-core will always be a subgraph of a k-core. This
+ *   means that the larger k becomes, the smaller its k-core (i.e. its corresponding
+ *   subgraph) will be. The k-core value (or coreness) assigned to a node will correspond
+ *   to the core with the gratest degree from all the cores where it belongs. This
+ *   implementation of k-core will look for cores lying within the interval set by the
+ *   min_core and max_core input variables.
+ * implementation_details: >
+ *   This algorithm is designed to run in parallel given its high degree of parallelization.
+ * applications:
+ *   - K-Core can be used to analyze hierarchical structures in a graph by revealing subgraphs
+ *     with particular properties. It can also help to visualize large graphs in 2D by using
+ *     the "layers" provided by the k-cores.
+ * see_also:
+ *   - pgx_builtin_s6_out_degree_distribution
+ *   - pgx_builtin_s7_in_degree_distribution
+ * links:
+ *   - name: An O(m) Algorithm for Cores Decomposition of Networks
+ *     url: https://arxiv.org/pdf/cs/0310049v1.pdf
+ *   - name: "k-core decomposition: a tool for the visualization of large scale networks"
+ *     url: https://arxiv.org/pdf/cs/0504107v2.pdf
+ */
+
+procedure k_core(G: graph, min_core, max_core: long; k_core: nodeProp<long>): long {
+  
+  nodeProp<int> active_nbrs;
+  nodeProp<bool> active, just_deleted; 
+
+  long current_k_core = min_core;
+  bool nodes_just_deleted = false;
+  bool active_nodes_left = true;
+
+  G.k_core = 0;
+  G.active = true;
+  G.just_deleted = false;
+
+  G.active_nbrs = _.outDegree() + _.inDegree(); 
+
+  while(current_k_core <= max_core && active_nodes_left) {
+    do {
+      active_nodes_left = false;
+      nodes_just_deleted = false;
+      // Notify neighbors that node is deleted
+      foreach(n : G.nodes) (n.just_deleted) {
+        foreach(k : n.outNbrs) {
+          k.active_nbrs--;
+        }
+        foreach(k : n.inNbrs) {
+          k.active_nbrs--;
+        }
+      }
+      //consolidate
+      foreach(n : G.nodes) (n.active) {
+        if(n.just_deleted) {
+          n.just_deleted = false;
+          n.active = false;
+        }
+        else if(n.active_nbrs < current_k_core) {
+          n.just_deleted = true;
+          n.k_core = current_k_core - 1;
+          active_nodes_left |= true;
+          nodes_just_deleted |= true;
+        }
+        else {
+          active_nodes_left |= true;
+        }
+      }
+    } while (nodes_just_deleted);
+    current_k_core++;
+  }
+
+  return current_k_core - 2;
+}

@@ -1,0 +1,16 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+
+/*
+* Computes the maximum out degree of a graph
+*
+* Input-Parameters:
+*	G:		arbitrary graph.
+* 
+* Returns: maximum out degree
+*
+*/
+procedure max_degree(G: graph): int {
+	return max(n: G.nodes) { n.degree() };
+}

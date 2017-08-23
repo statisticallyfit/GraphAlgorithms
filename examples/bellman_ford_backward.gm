@@ -1,0 +1,99 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Reversed Bellman-Ford Algorithm
+ * category: path finding
+ * complexity:
+ *   time: O(N + E) with N = number of nodes, E = number of edges
+ *   space: O(6 * N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: weight
+ *         type: edgeProp<double>
+ *         description: >
+ *           edge property holding the weight of each edge in the graph.
+ *       - name: source_node
+ *         type: node
+ *         description: the source node from the graph for the path.
+ *     out:
+ *       - name: distance
+ *         type: nodeProp<double>
+ *         description: >
+ *           node property holding the distance to the source node for each node
+ *           in the graph.
+ *       - name: parent
+ *         type: nodeProp<node>
+ *         description: >
+ *           node property holding the parent node of the each node in the shortest
+ *           path.
+ *       - name: parent_edge
+ *         type: nodeProp<edge>
+ *         description: >
+ *           node property holding the edge ID linking the current node in the path
+ *           with the previous node in the path.
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   Reversed bellman-ford finds multiple shortest paths at the same time
+ * definition: >
+ *   This variant of the Bellman-Ford algorithm tries to find the shortest path (if there 
+ *   is one) between the given source and destination nodes in a reversed fashion using
+ *   the incoming edges instead of the outgoing, while minimizing the distance or cost
+ *   associated to each edge in the graph.
+ * implementation_details: >
+ *   This algorithm is designed to run in parallel given its high degree of parallelization.
+ * applications:
+ *   - This algorithm can be implemented in optimization problems that can be represented
+ *     with a graph structure.
+ * compare_to:
+ *   - id: pgx_builtin_p3_single_source_all_destinations_bellman_ford
+ *     difference: >
+ *       Compared to the classic implementation of Bellman-Ford this variant is just
+ *       different in the way it traverses the graph, since it will use incoming edges
+ *       instead of outgoing, which gives it its reversed feature.
+ * see_also:
+ *   - pgx_builtin_p3_single_source_all_destinations_bellman_ford
+ * links:
+ *   - name: Bellman-Ford algorithm
+ *     url: https://en.wikipedia.org/wiki/Bellman%E2%80%93Ford_algorithm
+ */
+
+procedure bellman_ford_backward(G:graph, len: E_P<double>, root: node; dist: N_P<double>,
+    prev: N_P<node>, prev_edge: N_P<edge>) {
+
+  N_P<bool> updated;
+  N_P<bool> updated_nxt;
+  N_P<double>  dist_nxt;
+  bool fin = false;
+
+  G.dist = (_ == root) ? 0.0 : +INF;
+  G.updated = (_ == root) ? true: false;
+  G.dist_nxt = _.dist;
+  G.updated_nxt = _.updated;
+  G.prev = NIL;
+  G.prev_edge = NIL;
+
+  while(!fin) {
+    fin = true;
+
+    foreach(n: G.nodes)(n.updated) {
+      foreach(s: n.inNbrs) {
+        edge(G) e = s.toEdge(); // the edge to s
+        // updated_nxt becomes true only if dist_nxt is actually updated
+        <s.dist_nxt; s.updated_nxt,
+         s.prev, s.prev_edge> min= <n.dist + e.len; true, n, e>;
+      }
+    }
+
+    G.dist = _.dist_nxt;
+    G.updated = _.updated_nxt;
+    G.updated_nxt = false;
+    fin = ! exist(n: G.nodes){n.updated};
+  }
+}

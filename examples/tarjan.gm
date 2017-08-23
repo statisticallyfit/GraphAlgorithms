@@ -1,0 +1,108 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Strongly Connected Components (SCC) via Tarjan's algorithm
+ * category: connected components
+ * complexity:
+ *   time: O(N + E) with N = number of nodes, E = number of edges
+ *   space: O(5 * N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *     out:
+ *       - name: scc
+ *         type: nodeProp<long>
+ *         description: >
+ *           node property holding the label of the SCC assigned to each node.
+ *   return:
+ *     type: long
+ *     description: the total number of SCC found in the graph.
+ * tweetable_description: >
+ *   Tarjan finds strongly connected components in a graph
+ * definition: >
+ *   Tarjan's algorithm works on directed graphs for finding strongly connected
+ *   components (SCC). A SCC is a maximal subset of nodes of the graph with the particular
+ *   characteristic that every node in the SCC can be reachable from any other other node
+ *   in the SCC.
+ * implementation_details: >
+ *   The implementation of this algorithm uses the built-in DFS feature.
+ * applications:
+ *   - It can be used for clustering and, in social networks, to spot out groups of people
+ *     (commmunities), since people in groups tend to have a high density of links between
+ *     them.
+ * compare_to:
+ *   - id: pgx_builtin_g2a_strongly_connected_components_kosaraju
+ *     difference: >
+ *       Although both algorithms use DFS traversals to find the SCC in a graph, Kosaraju's
+ *       algorithm uses a second DFS (or BFS) traversal, while Tarjan just does a single DFS
+ *       traversal, but it needs an auxiliar stack to keep track of the nodes in the SCC.
+ * see_also:
+ *   - pgx_builtin_g2a_strongly_connected_components_kosaraju
+ *   - pgx_builtin_g3_weakly_connected_components
+ *   - pgx_builtin_c1_community_detection_label_propagation
+ *   - pgx_builtin_c2_community_detection_conductance_minimization
+ *   - pgx_builtin_s13_local_clustering_coefficient
+ * links:
+ *   - name: Tarjan's strongly connected components algorithm
+ *     url: http://en.wikipedia.org/wiki/Tarjan's_strongly_connected_components_algorithm
+ */
+
+procedure tarjan(G: graph; SCC: N_P<long>) : long {
+
+  N_P<bool> InStack;
+  N_P<long> LowLink;
+  N_P<long> Index;
+  nodeSeq Stack;
+
+  // sequentially initialize, otherwise compiler flags this algorithm as
+  // parallel in nature
+  for (n: G.nodes) {
+    n.SCC = -1;
+    n.InStack = false;
+    n.Index = -1;
+  }
+
+  long num_scc = 0;
+    
+  // DFS
+  for(n: G.nodes) (n.SCC == -1)
+  {
+    long dfs_index = 0;
+    
+    inDFS(t: G.nodes from n)[t.Index == -1]
+    {
+      // previsit
+      Stack.pushBack(t);
+      t.InStack = true;
+      t.LowLink = dfs_index;
+      t.Index = dfs_index;
+      dfs_index++;
+    }
+    inPost 
+    {
+      // post visit
+      for(k: t.nbrs)(k.SCC == -1)  {
+        t.LowLink min= k.LowLink;
+      }
+
+      // identified an SCC
+      if (t.LowLink == t.Index) {
+        node w = Stack.popBack();
+        while (w != t) {
+          w.InStack = false;
+          w.SCC = num_scc;
+          w = Stack.popBack();
+        }
+        w.InStack = false;
+        w.SCC = num_scc;
+        num_scc++;
+      }
+    }
+  }
+
+  return num_scc;
+}

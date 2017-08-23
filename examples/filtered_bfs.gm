@@ -1,0 +1,88 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+/**
+ * name: Filtered BFS (Breath-First Search)
+ * category: other
+ * complexity:
+ *   time: O(N + E) with N = number of nodes, E = number of edges
+ *   space: O(N) with N = number of nodes
+ * signature:
+ *   arguments:
+ *     in:
+ *       - name: G
+ *         type: graph
+ *         description: the graph.
+ *       - name: source_node
+ *         type: node
+ *         description: the source node from the graph for the path.
+ *       - name: init_with_inf
+ *         type: bool
+ *         description: >
+ *           boolean flag to set the initial distance values of the nodes. If set
+ *           to true, it will initialize the distances as INF, and -1 otherwise.
+ *       - name: filter_expression
+ *         type: vertexFilter
+ *         description: >
+ *           filter expression to be evaluated on the nodes during the graph
+ *           traversal.
+ *       - name: navigator_expression
+ *         type: vertexFilter
+ *         description: >
+ *           navigator expression to be evaluated on the nodes during the graph
+ *           traversal.
+ *     out:
+ *       - name: distance
+ *         type: nodeProp<int>
+ *         description: >
+ *           node property holding the hop distance for each reachable node in the
+ *           graph.
+ *       - name: parent
+ *         type: nodeProp<node>
+ *         description: >
+ *           node property holding the parent node of the each reachable node in the
+ *           path.
+ *   return:
+ *     type: void
+ *     description:
+ * tweetable_description: >
+ *   A (Breath-First Search) implementation with an option to filter edges during the traversal of the
+ *   graph
+ * definition: >
+ *   This filtered version of the BFS algorithm allows to use a filter and a navigator
+ *   expression to be evaluated over the nodes during the traversal and discriminate
+ *   them according to the desired criteria. It will return the distance to the source
+ *   node and the corresponding parent node for all the filtered nodes. 
+ * implementation_details: >
+ *   The implementation of this algorithm uses the built-in BFS feature.
+ * applications:
+ *   - In social networks, you can find people within a given distance from a person using BFS
+ *   - You can use BFS to find if there is a path between two vertices.
+ * see_also:
+ *   - pgx_builtin_s11_diameter
+ * links:
+ *   - name: Breadth-first search
+ *     url: https://en.wikipedia.org/wiki/Breadth-first_search
+ */
+
+require "oracle.pgx.filter.evaluation.ConcurrentFilterEvaluator";
+
+procedure filtered_bfs(G: graph, root: node, init_with_inf: bool, 
+    filter: $ConcurrentFilterEvaluator, navigator: $ConcurrentFilterEvaluator;
+    dist: nodeProperty<int>, parent: nodeProperty<node>) {
+
+  if (G.numNodes() == 0) {
+    return;
+  }
+
+  G.dist = init_with_inf ? +INF : -1;
+  G.parent = NIL;
+
+  root.dist = 0;
+
+  inBFS(n: G.nodes from root) ([navigator.evaluate($n) || filter.evaluate($n)])
+   [[navigator.evaluate($n)]] {
+    n.dist = currentBFSLevel();
+    n.parent = n.BFSParentNode();
+  }
+}
