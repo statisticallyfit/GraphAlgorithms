@@ -9,7 +9,7 @@
  * 
  */
 
-procedure kruskal(G: graph, weights: nodeProperty<int>(G)): graph {
+procedure kruskal(G: graph, weight: nodeProperty<int>(G)): graph {
 
 	graph MST;  // the resulting graph we need to get.
 	
@@ -20,13 +20,23 @@ procedure kruskal(G: graph, weights: nodeProperty<int>(G)): graph {
 
 	// declare edges of MST and G. 
 	edgeSet(MST) edgesMST;
-	edgeOrder(G) edgesSortedG = min(e: G.edges) { e.weight }
+
+
+	// initializing new collection to hold G's edges in least weight order.
+	edgeOrder(G) edgesSortedG;
+
+	foreach (e: G.edges) {
+		e.weight
+	}
 
 
 	int numEdgesMST = 0;
 	int numEdgesG = G.numEdges();
 
 	while(numEdgesMST < numEdgesG - 1) {
+		// find edge of least weight in G (separate function)
+		// attach e to MST if no circuit made, otherwise remove (by nodes)
+// -------------------------------------------------------------------------------------
 		
 		// find an edge e in edges of G of least weight.
 

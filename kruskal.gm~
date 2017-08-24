@@ -1,19 +1,39 @@
-/*
-* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
-*/
 
-// K = adult threshold
-// teen_cnt = how many teen friends each node has
-// return = average count of teen friends of all adults
+/**
+ * Kruskal's algorithm to find a minimum spanning tree in graph G. 
+ * 
+ * 
+ * input: graph, edge weights. 
+ * output: minimum spanning tree graph. 
+ * 
+ * 
+ */
 
-procedure avg_teen_cnt(G: graph, age: N_P<int>, K: int;
- teen_cnt: N_P<int>): float
-{
-  foreach(n: G.nodes) {
-    n.teen_cnt = count(t:n.inNbrs)(t.age >= 10 && t.age < 20);
-  }
+procedure kruskal(G: graph, weights: nodeProperty<int>(G)): graph {
 
-  float avgCount = (float) avg(n: G.nodes)(n.age > K){ n.teen_cnt };
-  return avgCount;
+	graph MST;  // the resulting graph we need to get.
+	
+	// initialize MST to have all nodes of G and no edges, yet.
+	nodeSet(MST) nodesMST;
+	nodeSet(G) nodesG;
+	nodesMST.addAll(nodesG);  
+
+	// declare edges of MST and G. 
+	edgeSet(MST) edgesMST;
+	edgeOrder(G) edgesSortedG = min(e: G.edges) { e.weight }
+
+
+	int numEdgesMST = 0;
+	int numEdgesG = G.numEdges();
+
+	while(numEdgesMST < numEdgesG - 1) {
+		
+		// find an edge e in edges of G of least weight.
+
+		// delete e from the edgelist. 
+
+		// if addition of e to MST does not make circuit,
+		// then adde to edge set of MST and set numEdgesMST += 1
+	}
+
 }
-
