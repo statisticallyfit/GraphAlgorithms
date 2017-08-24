@@ -1,0 +1,19 @@
+/*
+* Copyright (C) 2013 - 2017 Oracle and/or its affiliates. All rights reserved.
+*/
+
+// K = adult threshold
+// teen_cnt = how many teen friends each node has
+// return = average count of teen friends of all adults
+
+procedure avg_teen_cnt(G: graph, age: N_P<int>, K: int;
+ teen_cnt: N_P<int>): float
+{
+  foreach(n: G.nodes) {
+    n.teen_cnt = count(t:n.inNbrs)(t.age >= 10 && t.age < 20);
+  }
+
+  float avgCount = (float) avg(n: G.nodes)(n.age > K){ n.teen_cnt };
+  return avgCount;
+}
+
